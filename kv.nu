@@ -2,11 +2,21 @@
 # original version by @clipplerblood
 # https://discord.com/channels/601130461678272522/615253963645911060/1149709351821516900
 
-def kvPath [] {return ($nu.default-config-dir | path join kv.nuon)}
+export def kvPath [
+    --values_folder # return the path to the values folder
+] null => path {
+    $nu.home-path | path join .config nushell kv
+    | if $values_folder {
+        path join values
+    } else {
+        path join kv.nuon
+    }
+}
 
 # Loads the KV Store, creating it if it doesn't exist
 def load-kv [] {
     if not (kvPath | path exists) {
+        mkdir (kvPath --values_folder)
         {} | save (kvPath)
     }
     open (kvPath)
