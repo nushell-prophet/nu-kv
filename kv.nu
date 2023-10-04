@@ -2,7 +2,7 @@
 # original version by @clipplerblood
 # https://discord.com/channels/601130461678272522/615253963645911060/1149709351821516900
 
-def kvPath [] {return $"($nu.default-config-dir)\\kv.nuon"}
+def kvPath [] {return ($nu.default-config-dir | path join kv.nuon)}
 
 # Loads the KV Store, creating it if it doesn't exist
 def load-kv [] {
@@ -24,7 +24,12 @@ export def set [
 ] {
     let $piped = $in
 
-    let v = if $value != null { $value } else if $piped != null { $piped } else { null }
+    let v = if $value != null {
+        $value
+    } else if $piped != null {
+        $piped
+    } else { null }
+
     (load-kv) | upsert $key $v | save -f (kvPath)
 
     if $p { return $v }
