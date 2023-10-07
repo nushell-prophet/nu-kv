@@ -1,6 +1,14 @@
 # nushell kv
-# original version by @clipplerblood
+# the original version by @clipplerblood
 # https://discord.com/channels/601130461678272522/615253963645911060/1149709351821516900
+
+# Returns the KV store as table
+# Example:
+# > kv
+# ╭────┬──────╮
+# │ pi │ 3.14 │
+# ╰────┴──────╯
+export def main [] { load-kv }
 
 export def kvPath [
     --values_folder # return the path to the values folder
@@ -28,19 +36,18 @@ def load-kv [] {
 # > kv set pi 3.14
 # > 3.14 | kv set pi
 export def set [
-    key,        # Key to set
+    key: string        # Key to set
     value?,     # Value to set. Can be omitted if `kv set <k>` is used in a pipeline
     -p          # Output back the input value to the pipeline
 ] {
-    let $piped = $in
+    let $piped_in = $in
+    let $v = $value | default $piped_in
 
-    let v = if $value != null {
-        $value
-    } else if $piped != null {
-        $piped
-    } else { null }
+    let $file_path = (kvPath --values_folder) | path join ($key + (date_now) + .json)
 
-    (load-kv) | upsert $key $v | save -f (kvPath)
+    $v |  save $file_path
+
+    (load-kv) | upsert $key $file_path | save -f (kvPath)
 
     if $p { return $v }
 }
@@ -57,7 +64,7 @@ export def get [key] {
     if not ($key in $db) {
         return
     }
-    $db | core get $key
+    $db | core get $key | open $in
 }
 
 
@@ -70,13 +77,6 @@ export def del [key] {
     $db | reject $key | save -f (kvPath)
 }
 
-# Returns the KV store as table
-# Example:
-# > kv
-# ╭────┬──────╮
-# │ pi │ 3.14 │
-# ╰────┴──────╯
-export def main [] { load-kv }
 
 # Push a value to a list in the KV store.
 # Notes:
@@ -121,3 +121,5 @@ export def "push" [
 
     if $p { return $v }
 }
+
+def date_now [] {date now | format date "%Y%m%d_%H%M%S"}
