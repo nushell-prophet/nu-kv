@@ -13,12 +13,10 @@ export def main [] { load-kv }
 export def kvPath [
     --values_folder # return the path to the values folder
 ] null => path {
-    $nu.home-path | path join .config nushell kv
-    | if $values_folder {
-        path join values
-    } else {
-        path join kv.nuon
-    }
+    $nu.home-path
+    | path join .config nushell kv (
+        if $values_folder { 'values' } else { 'kv.nuon' }
+    )
 }
 
 # Loads the KV Store, creating it if it doesn't exist
