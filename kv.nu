@@ -36,16 +36,16 @@ def load-kv [] {
 # > kv set pi 3.14
 # > 3.14 | kv set pi
 export def set [
-    key: string        # Key to set
-    value?,     # Value to set. Can be omitted if `kv set <k>` is used in a pipeline
-    -p          # Output back the input value to the pipeline
+    key: string = 'last'    # Key to set
+    value?: any             # Value to set. Can be omitted if `kv set <k>` is used in a pipeline
+    -p                      # Output back the input value to the pipeline
 ] {
     let $piped_in = $in
     let $v = $value | default $piped_in
 
     let $file_path = (kvPath --values_folder) | path join ($key + (date_now) + .json)
 
-    $v |  save $file_path
+    $v | save $file_path
 
     (load-kv) | upsert $key $file_path | save -f (kvPath)
 
@@ -59,7 +59,9 @@ alias "core get" = get
 # Example:
 # > kv get pi
 # 3.14
-export def get [key] {
+export def get [
+    key: string = 'last'
+] {
     let db = (load-kv)
     if not ($key in $db) {
         return
