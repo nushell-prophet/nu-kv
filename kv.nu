@@ -59,7 +59,7 @@ alias "core get" = get
 # > kv get pi
 # 3.14
 export def get [
-    key: string = 'last'
+    key: string@'nu-complete-key-names' = 'last'
 ] {
     let db = (load-kv)
     if not ($key in $db) {
@@ -70,7 +70,9 @@ export def get [
 
 
 # Deletes a key from the KV Store
-export def del [key] {
+export def del [
+    key: string@'nu-complete-key-names' = 'last'
+] {
     let db = (load-kv)
     if not ($key in $db) {
         return
@@ -125,3 +127,10 @@ export def "push" [
 
 def date_now [] {date now | format date "%Y%m%d_%H%M%S"}
 
+def nu-complete-key-names [] {
+    load-kv | columns
+}
+
+def nu-complete-file-names [] {
+    ls -s (kvPath --values_folder) | sort-by modified -r | select name modified | upsert modified {|i| $i.modified | date humanize} | rename value description
+}
