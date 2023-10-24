@@ -3,6 +3,7 @@
 # https://discord.com/channels/601130461678272522/615253963645911060/1149709351821516900
 
 # Returns the KV store as table
+#
 # Example:
 # > kv
 # ╭────┬──────╮
@@ -12,7 +13,7 @@ export def main [] { load-kv }
 
 export def kvPath [
     --values_folder # return the path to the values folder
-] null => path {
+] null -> path {
     $nu.home-path
     | path join .config nushell kv (
         if $values_folder { 'values' } else { 'kv.nuon' }
@@ -20,7 +21,7 @@ export def kvPath [
 }
 
 # Loads the KV Store, creating it if it doesn't exist
-def load-kv [] {
+def load-kv [] : nothing -> record {
     if not (kvPath | path exists) {
         mkdir (kvPath --values_folder)
         {} | save (kvPath)
@@ -37,7 +38,7 @@ export def set [
     key: string = 'last'    # Key to set
     value?: any             # Value to set. Can be omitted if `kv set <k>` is used in a pipeline
     -p                      # Output back the input value to the pipeline
-] {
+] any -> any {
     let $piped_in = $in
     let $v = $value | default $piped_in
 
@@ -123,3 +124,4 @@ export def "push" [
 }
 
 def date_now [] {date now | format date "%Y%m%d_%H%M%S"}
+
