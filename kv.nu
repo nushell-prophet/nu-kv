@@ -68,6 +68,12 @@ export def get [
     $db | core get $key | open $in
 }
 
+export def get-file [
+    filename: string@'nu-complete-file-names'
+] {
+    (kvPath --values_folder) | path join $filename | open $in
+}
+
 
 # Deletes a key from the KV Store
 export def del [
