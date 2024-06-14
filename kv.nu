@@ -30,7 +30,7 @@ def load-kv [] : nothing -> record {
 }
 
 # Sets a value in the KV store. Any value can be provided, even other tables.
-# Examples:
+#
 # > kv set pi 3.14
 # > 3.14 | kv set pi
 export def set [
@@ -54,7 +54,7 @@ alias "core get" = get
 
 # Gets a value from the KV store.
 # If the key is missing, it returns null.
-# Example:
+#
 # > kv get pi
 # 3.14
 export def get [
@@ -68,6 +68,7 @@ export def get [
     }
 }
 
+# Get a file with a given name. Useful for opening previous versions of stored values.
 export def get-file [
     filename: string@'nu-complete-file-names'
 ] {
