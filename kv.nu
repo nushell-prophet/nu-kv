@@ -44,7 +44,7 @@ export def set [
 
     let $file_path = kvPath --values_folder | path join $'($key)(date_now).json'
 
-    $v | to json | save $file_path
+    $v | save $file_path
 
     load-kv | upsert $key $file_path | save -f (kvPath)
 
