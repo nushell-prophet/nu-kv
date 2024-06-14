@@ -11,7 +11,7 @@
 # ╰────┴──────╯
 export def main [] { load-kv }
 
-export def kvPath [
+def kvPath [
     --values_folder # Return the path to the values folder
 ] null -> path {
     $nu.home-path
