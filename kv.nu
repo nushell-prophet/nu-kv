@@ -42,11 +42,11 @@ export def set [
     let $piped_in = $in
     let $v = $value | default $piped_in
 
-    let $file_path = (kvPath --values_folder) | path join ($key + (date_now) + .json)
+    let $file_path = kvPath --values_folder | path join $'($key)(date_now).json'
 
     $v | to json | save $file_path
 
-    (load-kv) | upsert $key $file_path | save -f (kvPath)
+    load-kv | upsert $key $file_path | save -f (kvPath)
 
     if $p { return $v }
 }
@@ -61,17 +61,18 @@ alias "core get" = get
 export def get [
     key: string@'nu-complete-key-names' = 'last'
 ] {
-    let db = (load-kv)
-    if not ($key in $db) {
+    load-kv
+    | if not ($key in $in) {
         return
+    } else {
+        core get $key | open
     }
-    $db | core get $key | open $in
 }
 
 export def get-file [
     filename: string@'nu-complete-file-names'
 ] {
-    (kvPath --values_folder) | path join $filename | open $in
+    kvPath --values_folder | path join $filename | open
 }
 
 
@@ -79,11 +80,12 @@ export def get-file [
 export def del [
     key: string@'nu-complete-key-names' = 'last'
 ] {
-    let db = (load-kv)
-    if not ($key in $db) {
+    load-kv
+    | if not ($key in $in) {
         return
+    } else {
+        reject $key | save -f (kvPath)
     }
-    $db | reject $key | save -f (kvPath)
 }
 
 
@@ -107,7 +109,7 @@ export def "push" [
 ] {
     # Vars
     let $piped = $in
-    let $db = (load-kv)
+    let $db = load-kv
     let v = if $value != null { $value } else if $piped != null { $piped } else { return }
 
     if not ($key in $db) {
@@ -115,7 +117,7 @@ export def "push" [
         $db | upsert $key [$v] | save -f (kvPath)
     } else {
         # Otherwise, assert that the value is a list
-        let stored = ($db | core get $key)
+        let stored = $db | core get $key
         if not ($stored | describe | str starts-with list) {
             error make {msg: $"($key) is not a list \n($stored | table )", }
         }
