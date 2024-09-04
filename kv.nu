@@ -57,7 +57,7 @@ export def set [
     let $extension = if $type =~ 'table|list|record' {
             'msgpackz'
         } else {
-            'json'
+            'json' # msgpackz can't store primitives in 0.97.1
         }
 
     let $file_path = kvPath --values_folder
