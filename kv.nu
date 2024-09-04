@@ -9,7 +9,19 @@
 # ╭────┬──────╮
 # │ pi │ 3.14 │
 # ╰────┴──────╯
-export def main [] { load-kv }
+export def main [
+    --keys
+] {
+    load-kv
+    | items {|k v| {value: $k, filename: $v}}
+    | insert description {|i|
+        $i.filename
+        | str substring (-34)..(-20)
+        | into datetime --format '%Y%m%d_%H%M%S'
+    }
+    | sort-by description --reverse
+    | select value description filename
+}
 
 def kvPath [
     --values_folder # Return the path to the values folder
@@ -138,13 +150,8 @@ export def "push" [
 def date_now [] { date now | format date "%Y%m%d_%H%M%S_%f" }
 
 def nu-complete-key-names [] {
-    load-kv
-    | items {|k v| {value: $k, description: $v}}
-    | update description {|i|
-        str substring (-34)..(-20)
-        | into datetime --format '%Y%m%d_%H%M%S'
-    }
-    | sort-by description --reverse
+    main
+    | reject filename
 }
 
 def nu-complete-file-names [] {
