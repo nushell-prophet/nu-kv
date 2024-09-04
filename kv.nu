@@ -41,7 +41,7 @@ export def set [
     let $piped_in = $in
     let $v = $value | default $piped_in
 
-    let $file_path = kvPath --values_folder | path join $'($key)(date_now).json'
+    let $file_path = kvPath --values_folder | path join $'($key)(date_now).msgpackz'
 
     $v | save $file_path
 
