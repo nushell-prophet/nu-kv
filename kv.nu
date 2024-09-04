@@ -16,7 +16,8 @@ export def main [
     | items {|k v| {value: $k, filename: $v}}
     | insert description {|i|
         $i.filename
-        | str substring (-34)..(-20)
+        | str replace -r '\.(msgpackz|json)$' ''
+        | str substring (-25)..(-11)
         | into datetime --format '%Y%m%d_%H%M%S'
     }
     | sort-by description --reverse
@@ -50,10 +51,17 @@ export def set [
     value?: any             # Value to set. Can be omitted if `kv set <key>` is used in a pipeline
     -p                      # Output the input value back to the pipeline
 ] any -> any {
-    let $piped_in = $in
-    let $v = $value | default $piped_in
+    let $v = if $value == null {} else {$value}
 
-    let $file_path = kvPath --values_folder | path join $'($key)(date_now).msgpackz'
+    let type = $value | describe
+    let $extension = if $type =~ 'table|list|record' {
+        'msgpackz'
+    } else {
+        'json'
+    }
+
+    let $file_path = kvPath --values_folder
+        | path join $'($key)_(date_now).($extension)'
 
     $v | save $file_path
 
