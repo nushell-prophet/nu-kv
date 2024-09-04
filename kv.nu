@@ -130,7 +130,7 @@ export def "push" [
     if $p { return $v }
 }
 
-def date_now [] { date now | format date "%Y%m%d_%H%M%S" }
+def date_now [] { date now | format date "%Y%m%d_%H%M%S_%f" }
 
 def nu-complete-key-names [] {
     load-kv | columns
