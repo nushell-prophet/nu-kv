@@ -138,7 +138,13 @@ export def "push" [
 def date_now [] { date now | format date "%Y%m%d_%H%M%S_%f" }
 
 def nu-complete-key-names [] {
-    load-kv | columns
+    load-kv
+    | items {|k v| {value: $k, description: $v}}
+    | update description {|i|
+        str substring (-34)..(-20)
+        | into datetime --format '%Y%m%d_%H%M%S'
+    }
+    | sort-by description --reverse
 }
 
 def nu-complete-file-names [] {
