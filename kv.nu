@@ -45,7 +45,12 @@ export def set [
 
     $v | save $file_path
 
-    load-kv | upsert $key $file_path | save -f (kvPath)
+    load-kv
+    | if $key in $in {
+        reject $key # to sort keys in chronological order
+    } else {}
+    | insert $key $file_path
+    | save -f (kvPath)
 
     if $p { return $v }
 }
