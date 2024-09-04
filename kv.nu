@@ -54,7 +54,7 @@ export def set [
     let $v = if $value == null {} else {$value}
 
     let type = $value | describe
-    let $extension = if $type =~ 'table|list|record' {
+    let $extension = if $type =~ 'table|list|record|binary' {
             'msgpackz'
         } else {
             'json' # msgpackz can't store primitives in 0.97.1
