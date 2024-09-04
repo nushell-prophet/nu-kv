@@ -50,11 +50,14 @@ export def set [
     key: string = 'last'    # Key to set
     value?: any             # Value to set. Can be omitted if `kv set <key>` is used in a pipeline
     -p                      # Output the input value back to the pipeline
+    --nuon                  # use nuon as a file format for saving
 ] any -> any {
     let $v = if $value == null {} else {$value}
 
     let type = $value | describe
-    let $extension = if $type =~ 'table|list|record|binary' {
+    let $extension = if $nuon {
+            'nuon'
+        } else if $type =~ 'table|list|record|binary' {
             'msgpackz'
         } else if $type == string {
             'json' # msgpackz can't store primitives in 0.97.1
