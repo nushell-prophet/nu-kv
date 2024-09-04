@@ -16,7 +16,7 @@ export def main [
     | items {|k v| {value: $k, filename: $v}}
     | insert description {|i|
         $i.filename
-        | str replace -r '\.(msgpackz|json)$' ''
+        | str replace -r '\.(msgpackz|json|nuon)$' ''
         | str substring (-25)..(-11)
         | into datetime --format '%Y%m%d_%H%M%S'
     }
@@ -56,8 +56,10 @@ export def set [
     let type = $value | describe
     let $extension = if $type =~ 'table|list|record|binary' {
             'msgpackz'
-        } else {
+        } else if $type == string {
             'json' # msgpackz can't store primitives in 0.97.1
+        } else {
+            'nuon'
         }
 
     let $file_path = kvPath --values_folder
