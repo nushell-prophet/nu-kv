@@ -55,10 +55,10 @@ export def set [
 
     let type = $value | describe
     let $extension = if $type =~ 'table|list|record' {
-        'msgpackz'
-    } else {
-        'json'
-    }
+            'msgpackz'
+        } else {
+            'json'
+        }
 
     let $file_path = kvPath --values_folder
         | path join $'($key)_(date_now).($extension)'
