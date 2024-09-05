@@ -17,10 +17,11 @@ export def main [
     load-kv
     | items {|k v| {name: $k, filename: $v}}
     | insert modified {|i|
-        ls $i.filename | core get 0.modified | date humanize
+        ls $i.filename | core get 0.modified
     }
     | sort-by modified --reverse
-    | select name modified filename
+    | update modified {date humanize}
+    | select name modified
 }
 
 def kvPath [
@@ -161,7 +162,6 @@ def date_now [] { date now | format date "%Y%m%d_%H%M%S_%f" }
 
 def nu-complete-key-names [] {
     main
-    | reject filename
     | rename value description
 }
 
