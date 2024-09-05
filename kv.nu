@@ -14,9 +14,11 @@ alias "core get" = get
 export def main [
     --files
 ] {
-    load-kv
-    | if files {} else {
-        items {|k v| {name: $k, filename: $v}}
+    if $files {
+        ls (kvPath --values_folder)
+    } else {
+        load-kv
+        | items {|k v| {name: $k, filename: $v}}
         | insert modified {|i|
             ls $i.filename | core get 0.modified
         }
