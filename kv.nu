@@ -50,13 +50,13 @@ export def set [
     key: string = 'last'    # Key to set
     value?: any             # Value to set. Can be omitted if `kv set <key>` is used in a pipeline
     -p                      # Output the input value back to the pipeline
-    --nuon                  # use nuon as a file format for saving
+    --extension (-e)        # extension for file format for saving
 ] any -> any {
     let $v = if $value == null {} else {$value}
 
     let type = $value | describe
-    let $extension = if $nuon {
-            'nuon'
+    let $extension = if $extension != '' {
+            $extension
         } else if $type =~ 'table|list|record|binary' {
             'msgpackz'
         } else if $type == string {
