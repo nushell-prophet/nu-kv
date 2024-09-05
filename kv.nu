@@ -91,7 +91,7 @@ export def get [
     key: string@'nu-complete-key-names' = 'last'
 ] {
     load-kv
-    | if not ($key in $in) {
+    | if $key not-in $in {
         return
     } else {
         core get $key | open
@@ -110,7 +110,7 @@ export def del [
     key: string@'nu-complete-key-names' = 'last'
 ] {
     load-kv
-    | if not ($key in $in) {
+    | if $key not-in $in {
         return
     } else {
         reject $key | save -f (kvPath)
