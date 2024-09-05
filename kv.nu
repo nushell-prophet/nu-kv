@@ -119,6 +119,15 @@ export def del [
     }
 }
 
+# reset kv store (leave all files in the `values` folder)
+export def reset [] {
+    [false true]
+    | input list 'confirm'
+    | if $in {
+        {} | save -f (kvPath)
+    }
+}
+
 # Pushes a value to a list in the KV store.
 # Notes:
 #   - When pushing to a new key, a new list is created.
