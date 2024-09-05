@@ -2,6 +2,8 @@
 # The original version by @clipplerblood
 # https://discord.com/channels/601130461678272522/615253963645911060/1149709351821516900
 
+alias "core get" = get
+
 # Returns the KV store as a table.
 #
 # Example:
@@ -13,15 +15,12 @@ export def main [
     --keys
 ] {
     load-kv
-    | items {|k v| {value: $k, filename: $v}}
-    | insert description {|i|
-        $i.filename
-        | str replace -r '\.(msgpackz|json|nuon)$' ''
-        | str substring (-25)..(-11)
-        | into datetime --format '%Y%m%d_%H%M%S'
+    | items {|k v| {name: $k, filename: $v}}
+    | insert modified {|i|
+        ls $i.filename | core get 0.modified | date humanize
     }
-    | sort-by description --reverse
-    | select value description filename
+    | sort-by modified --reverse
+    | select name modified filename
 }
 
 def kvPath [
@@ -79,8 +78,6 @@ export def set [
 
     if $p { return $v }
 }
-
-alias "core get" = get
 
 # Gets a value from the KV store.
 # If the key is missing, it returns null.
@@ -165,6 +162,7 @@ def date_now [] { date now | format date "%Y%m%d_%H%M%S_%f" }
 def nu-complete-key-names [] {
     main
     | reject filename
+    | rename value description
 }
 
 def nu-complete-file-names [] {
