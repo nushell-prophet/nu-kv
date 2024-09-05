@@ -54,7 +54,7 @@ export def set [
     key: string = 'last'    # Key to set
     value?: any             # Value to set. Can be omitted if `kv set <key>` is used in a pipeline
     -p                      # Output the input value back to the pipeline
-    --extension (-e)        # extension for file format for saving
+    --extension (-e): string = '' # extension for file format for saving
 ] any -> any {
     let $v = if $value == null {} else {$value}
 
