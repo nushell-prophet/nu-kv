@@ -12,16 +12,18 @@ alias "core get" = get
 # │ pi │ 3.14 │
 # ╰────┴──────╯
 export def main [
-    --keys
+    --files
 ] {
     load-kv
-    | items {|k v| {name: $k, filename: $v}}
-    | insert modified {|i|
-        ls $i.filename | core get 0.modified
+    | if files {} else {
+        items {|k v| {name: $k, filename: $v}}
+        | insert modified {|i|
+            ls $i.filename | core get 0.modified
+        }
+        | sort-by modified --reverse
+        | update modified {date humanize}
+        | select name modified
     }
-    | sort-by modified --reverse
-    | update modified {date humanize}
-    | select name modified
 }
 
 def kvPath [
