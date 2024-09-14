@@ -56,7 +56,8 @@ export def set [
     -p                      # Output the input value back to the pipeline
     --extension (-e): string = '' # extension for file format for saving
 ] any -> any {
-    let $v = if $value == null {} else {$value}
+    let $input = $in
+    let $v = if $value == null {$input} else {$value}
 
     let type = $value | describe
     let $extension = if $extension != '' {
@@ -81,7 +82,7 @@ export def set [
     | insert $key $file_path
     | save -f (kvPath)
 
-    if $p { return $v }
+    if $p { return $input }
 }
 
 # Gets a value from the KV store.
