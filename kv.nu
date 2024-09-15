@@ -184,7 +184,9 @@ export def push [
 # hello
 #
 # > kv get my-stack
-# [hello]
+# ╭────────────╮
+# │ empty list │
+# ╰────────────╯
 export def "pop" [
     key  # Key to get
 ] {
