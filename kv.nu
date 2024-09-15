@@ -173,6 +173,35 @@ export def push [
     if $p { return $value_to_push }
 }
 
+# Get the last value of a list in the KV store.
+# Not an actual "pop". To remove the element, use the flag -r.
+# Example:
+# > kv set my-stack ["hello", "world"]
+# > kv pop my-stack
+# world
+#
+# > kv pop my-stack
+# hello
+#
+# > kv get my-stack
+# [hello]
+export def "pop" [
+    key  # Key to get
+] {
+    let $stored = get $key
+    let $value = $stored
+        | if ($in | length) == 0 {
+            return
+        } else {
+            last
+        }
+
+    if ($stored | length) > 0 {
+        set $key ($stored | drop)
+    }
+    return $value
+}
+
 # Autocompletion for key names
 def nu-complete-key-names [] {
     main | rename value description
