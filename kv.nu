@@ -29,13 +29,14 @@ export def main [
 def kvPath [
     --values_folder  # Return the path to the values folder instead of the KV file
 ] null -> path {
-    let $kv_dir = $nu.home-path | path join '.config' 'nushell' 'kv'
-    if $values_folder {
+    $nu.home-path
+    | path join '.config' 'nushell' 'kv'
+    | if $values_folder {
         # Return the path to the 'values' folder
-        $kv_dir | path join 'values'
+        path join 'values'
     } else {
         # Return the path to the 'kv.nuon' file
-        $kv_dir | path join 'kv.nuon'
+        path join 'kv.nuon'
     }
 }
 
@@ -192,11 +193,7 @@ export def "pop" [
 ] {
     let $stored = get $key
     let $value = $stored
-        | if ($in | length) == 0 {
-            return
-        } else {
-            last
-        }
+        | if ($in | length) == 0 { return } else { last }
 
     if ($stored | length) > 0 {
         set $key ($stored | drop)
