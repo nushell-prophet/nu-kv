@@ -1,127 +1,125 @@
-# nushell kv
-# The original version by @clipplerblood
+# Nushell Key-Value Store (kv)
+# Original version by @clipplerblood
 # https://discord.com/channels/601130461678272522/615253963645911060/1149709351821516900
 
+# Alias to avoid conflict with the custom 'get' function
 alias "core get" = get
 
-# Returns the KV store as a table.
-#
-# Example:
-# > kv
-# ╭────┬──────╮
-# │ pi │ 3.14 │
-# ╰────┴──────╯
+# Display the KV store as a table or list files in the values folder
 export def main [
-    --files
+    --files  # List the files in the values folder instead of the KV store
 ] {
     if $files {
+        # List files in the values folder
         ls (kvPath --values_folder)
     } else {
+        # Load the KV store and display it as a table with modification dates
         load-kv
-        | items {|k v| {name: $k, filename: $v}}
-        | insert modified {|i|
-            ls $i.filename | core get 0.modified
+        | items {|key, value| { name: $key, filename: $value } }
+        | insert modified {|item|
+            ls $item.filename | core get 0.modified
         }
         | sort-by modified --reverse
-        | update modified {date humanize}
+        | update modified { date humanize }
         | select name modified
     }
 }
 
+# Return the path to the KV store file or values folder
 def kvPath [
-    --values_folder # Return the path to the values folder
+    --values_folder  # Return the path to the values folder instead of the KV file
 ] null -> path {
-    $nu.home-path
-    | path join .config nushell kv (
-        if $values_folder { 'values' } else { 'kv.nuon' }
-    )
-}
-
-# Loads the KV store, creating it if it doesn't exist.
-def load-kv [] : nothing -> record {
-    if not (kvPath | path exists) {
-        mkdir (kvPath --values_folder)
-        {} | save (kvPath)
+    let $kv_dir = $nu.home-path | path join '.config' 'nushell' 'kv'
+    if $values_folder {
+        # Return the path to the 'values' folder
+        $kv_dir | path join 'values'
+    } else {
+        # Return the path to the 'kv.nuon' file
+        $kv_dir | path join 'kv.nuon'
     }
-    open (kvPath)
 }
 
-# Sets a value in the KV store. Any value can be provided, even other tables.
-#
-# > kv set pi 3.14
-# > 3.14 | kv set pi
+# Load the KV store, creating it and the values folder if they don't exist
+def load-kv [] : nothing -> record {
+    let $kv_file = kvPath
+    if not ($kv_file | path exists) {
+        # Create the values folder and initialize an empty KV store
+        mkdir (kvPath --values_folder)
+        {} | save $kv_file
+    }
+    # Open and return the KV store
+    open $kv_file
+}
+
+# Generate a timestamped filename
+def date_now [] {
+    date now | format date "%Y%m%d_%H%M%S_%f"
+}
+
+# Set a value in the KV store, optionally taking input from the pipeline
 export def set [
-    key: string = 'last'    # Key to set
-    value?: any             # Value to set. Can be omitted if `kv set <key>` is used in a pipeline
-    -p                      # Output the input value back to the pipeline
-    --extension (-e): string = '' # extension for file format for saving
+    key: string = 'last'          # Specify the key to set
+    value?: any                   # Provide the value to set (optional if used in a pipeline)
+    -p                            # Output the input value back to the pipeline
+    --extension (-e): string = '' # Specify the file extension for saving
 ] any -> any {
     let $input = $in
-    let $v = if $value == null {$input} else {$value}
+    let $value_to_store = if $value == null { $input } else { $value }
+    let $value_type = $value_to_store | describe
 
-    let type = $value | describe
-    let $extension = if $extension != '' {
+    # Determine the file extension based on the value type
+    let $file_extension = if $extension != '' {
             $extension
-        } else if $type =~ 'table|list|record|binary' {
+        } else if $value_type =~ 'table|list|record|binary' {
             'msgpackz'
-        } else if $type == string {
-            'json' # msgpackz can't store primitives in 0.97.1
+        } else if $value_type == 'string' {
+            'json'  # 'msgpackz' can't store primitives in some versions
         } else {
             'nuon'
         }
 
+    # Generate a unique filename for the value
     let $file_path = kvPath --values_folder
-        | path join $'($key)_(date_now).($extension)'
+        | path join $"($key)_(date_now).($file_extension)"
 
-    $v | save $file_path
+    # Save the value to the file
+    $value_to_store | save $file_path
 
+    # Update the KV store
     load-kv
-    | if $key in $in {
-        reject $key # to sort keys in chronological order
-    } else {}
+    | reject $key -i # Remove existing key to sort chronologically
     | insert $key $file_path
     | save -f (kvPath)
 
+    # Output the input value if -p is specified
     if $p { return $input }
 }
 
-# Gets a value from the KV store.
-# If the key is missing, it returns null.
-#
-# > kv get pi
-# 3.14
+# Get a value from the KV store
 export def get [
-    key: string@'nu-complete-key-names' = 'last'
+    key: string@'nu-complete-key-names' = 'last'  # Specify the key to retrieve
 ] {
-    load-kv
-    | if $key not-in $in {
-        return
-    } else {
-        core get $key | open
-    }
+    load-kv | core get $key | open
 }
 
-# Get a file with a given name. Useful for opening previous versions of stored values.
+# Retrieve a file by its filename from the values folder
 export def get-file [
-    filename: string@'nu-complete-file-names'
+    filename: string@'nu-complete-file-names'  # Specify the filename to retrieve
 ] {
     kvPath --values_folder | path join $filename | open
 }
 
-# Deletes a key from the KV store.
+# Delete a key from the KV store
 export def del [
-    key: string@'nu-complete-key-names' = 'last'
+    key: string@'nu-complete-key-names' = 'last'  # Specify the key to delete
 ] {
-    load-kv
-    | if $key not-in $in {
-        return
-    } else {
-        reject $key | save -f (kvPath)
-    }
+    # Remove the key and save the KV store
+    load-kv | reject $key | save -f (kvPath)
 }
 
-# reset kv store (leave all files in the `values` folder)
+# Reset the KV store (leave all files in the 'values' folder)
 export def reset [] {
+    # Confirm before resetting
     [false true]
     | input list 'confirm'
     | if $in {
@@ -129,56 +127,62 @@ export def reset [] {
     }
 }
 
-# Pushes a value to a list in the KV store.
-# Notes:
-#   - When pushing to a new key, a new list is created.
-#   - When pushing to an existing key, the old value is checked to be of type list.
-# Example:
-# > kv push my-stack "hello"
-# > kv get my-stack
-# [hello]
-# > kv push my-stack "world"
-# [hello, world]
-# kv push my-stack "hello" -u
-# [world, hello]
-export def "push" [
-    key,    # Key to set
-    value?, # Value to set. Can be omitted if `kv set <key>` is used in a pipeline
-    -p,     # Output the input value back to the pipeline
-    -u      # Push and ensure uniqueness, similar to a "sorted hash set". The pushed value will still be the last
-] {
-    let $piped = $in
-    let $db = load-kv
-    let $v = if $value != null { $value } else if $piped != null { $piped } else { return }
-
-    if not ($key in $db) {
-        # If key not in db, set a list with the value
-        $db | upsert $key [$v] | save -f (kvPath)
-    } else {
-        # Otherwise, ensure the stored value is a list
-        let $stored = $db | core get $key
-        if not ($stored | describe | str starts-with list) {
-            error make { msg: $"($key) is not a list \n($stored | table)" }
-        }
-
-        # Store the updated list. If -u is set, remove duplicates
-        if $u {
-            $db | upsert $key ($stored | where {|x| $x != $v} | append $v) | save -f (kvPath)
+# Push a value to a list in the KV store
+export def push [
+    key: string                 # Specify the key to push to
+    value?: any                 # Provide the value to push (optional if used in a pipeline)
+    -p                          # Output the input value back to the pipeline
+    -u                          # Ensure uniqueness in the list
+] any -> any {
+    let $input = $in
+    let $value_to_push = if $value != null {
+            $value
+        } else if $input != null {
+            $input
         } else {
-            $db | upsert $key ($stored | append $v) | save -f (kvPath)
+            error make { msg: "No value provided to push" }
         }
+
+    let $kv_store = load-kv
+
+    if not ($key in $kv_store) {
+        # Key does not exist; create a new list with the value
+        $kv_store
+        | upsert $key [$value_to_push]
+        | save -f (kvPath)
+    } else {
+        # Key exists; retrieve and update the list
+        let $stored_list = $kv_store | core get $key
+        if not ($stored_list | describe | str starts-with 'list') {
+            error make { msg: $"Key '($key)' is not associated with a list" }
+        }
+
+        let $updated_list = if $u {
+                # Ensure uniqueness
+                $stored_list | where {|x| $x != $value_to_push} | append $value_to_push
+            } else {
+                # Simply append the new value
+                $stored_list | append $value_to_push
+            }
+
+        # Update the KV store
+        $kv_store | upsert $key $updated_list | save -f (kvPath)
     }
 
-    if $p { return $v }
+    # Output the input value if -p is specified
+    if $p { return $value_to_push }
 }
 
-def date_now [] { date now | format date "%Y%m%d_%H%M%S_%f" }
-
+# Autocompletion for key names
 def nu-complete-key-names [] {
-    main
-    | rename value description
+    main | rename value description
 }
 
+# Autocompletion for file names in the values folder
 def nu-complete-file-names [] {
-    ls -s (kvPath --values_folder) | sort-by modified -r | select name modified | upsert modified {|i| $i.modified | date humanize} | rename value description
+    ls -s (kvPath --values_folder)
+    | sort-by modified --reverse
+    | select name modified
+    | update modified { date humanize }
+    | rename value description
 }
