@@ -6,23 +6,16 @@
 alias "core get" = get
 
 # Display the KV store as a table or list files in the values folder
-export def main [
-    --files  # List the files in the values folder instead of the KV store
-] {
-    if $files {
-        # List files in the values folder
-        ls (kvPath --values_folder)
-    } else {
-        # Load the KV store and display it as a table with modification dates
-        load-kv
-        | items {|key, value| { name: $key, filename: $value } }
-        | insert modified {|item|
-            ls $item.filename | core get 0.modified
-        }
-        | sort-by modified --reverse
-        | update modified { date humanize }
-        | select name modified
+export def main [] {
+    # Load the KV store and display it as a table with modification dates
+    load-kv
+    | items {|key, value| { name: $key, filename: $value } }
+    | insert modified {|item|
+        ls $item.filename | core get 0.modified
     }
+    | sort-by modified --reverse
+    | update modified { date humanize }
+    | select name modified
 }
 
 # Return the path to the KV store file or values folder
@@ -105,9 +98,16 @@ export def get [
 
 # Retrieve a file by its filename from the values folder
 export def get-file [
-    filename: string@'nu-complete-file-names'  # Specify the filename to retrieve
+    filename: string@'nu-complete-file-names' = ''  # Specify the filename to retrieve
 ] {
-    kvPath --values_folder | path join $filename | open
+    if $filename == '' {
+        ls (kvPath --values_folder)
+        | sort-by modified -r
+    } else {
+        kvPath --values_folder
+        | path join $filename
+        | open
+    }
 }
 
 # Delete a key from the KV store
