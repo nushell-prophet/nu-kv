@@ -67,7 +67,7 @@ export def set [
         } else if $value_type =~ 'table|list|record|binary' {
             'msgpackz'
         } else if $value_type == 'string' {
-            'json'  # 'msgpackz' can't store primitives in some versions
+            'txt'  # 'msgpackz' can't store primitives in some versions
         } else {
             'nuon'
         }
