@@ -195,10 +195,9 @@ export def "pop" [
     let $value = $stored
         | if ($in | length) == 0 { return } else { last }
 
-    if ($stored | length) > 0 {
-        set $key ($stored | drop)
-    }
-    return $value
+    if ($stored | length) > 0 { set $key ($stored | drop) }
+
+    $value
 }
 
 # Autocompletion for key names
