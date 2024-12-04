@@ -202,7 +202,12 @@ export def "pop" [
 
 # Autocompletion for key names
 def nu-complete-key-names [] {
-    main | rename value description
+    main
+    | rename value description
+    | {
+        completions : $in,
+        options: { completion_algorithm: "alphabetical", positional: false, sort: false }
+    }
 }
 
 # Autocompletion for file names in the values folder
