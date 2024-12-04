@@ -57,7 +57,7 @@ export def set [
     -p                            # Output the input value back to the pipeline
     --extension (-e): string = '' # Specify the file extension for saving
 ] any -> any {
-    let $input = $in
+    let $input = $in # we store input here as it might be needed to return at the end of this command
     let $value_to_store = if $value == null { $input } else { $value }
     let $value_type = $value_to_store | describe
 
