@@ -206,7 +206,9 @@ def nu-complete-key-names [] {
     | rename value description
     | {
         completions : $in,
-        options: { completion_algorithm: "alphabetical", positional: false, sort: false }
+        options: {
+            sort: false
+        }
     }
 }
 
@@ -217,4 +219,10 @@ def nu-complete-file-names [] {
     | select name modified
     | update modified { date humanize }
     | rename value description
+}
+
+def history-last [] {
+    open $nu.history-path
+    | query db "select * from history order by id desc limit 1"
+    | get command_line.0
 }
