@@ -4,14 +4,15 @@
 
 # Alias to avoid conflict with the custom 'get' function
 alias "core get" = get
+alias core_ls = ls
 
 # Display the KV store as a table or list files in the values folder
-export def main [] {
+export def ls [] {
     # Load the KV store and display it as a table with modification dates
     load-kv
     | items {|key, value| { name: $key, filename: $value } }
     | insert modified {|item|
-        ls $item.filename | core get 0.modified
+        core_ls $item.filename | core get 0.modified
     }
     | sort-by modified --reverse
     | update modified { date humanize }
@@ -101,7 +102,7 @@ export def get-file [
     filename: string@'nu-complete-file-names' = ''  # Specify the filename to retrieve
 ] {
     if $filename == '' {
-        ls (kv-path --values_folder)
+        core_ls (kv-path --values_folder)
         | sort-by modified -r
     } else {
         kv-path --values_folder
@@ -214,7 +215,7 @@ def nu-complete-key-names [] {
 
 # Autocompletion for file names in the values folder
 def nu-complete-file-names [] {
-    ls -s (kv-path --values_folder)
+    core_ls -s (kv-path --values_folder)
     | sort-by modified --reverse
     | select name modified
     | update modified { date humanize }
