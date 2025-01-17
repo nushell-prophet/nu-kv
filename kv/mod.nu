@@ -8,3 +8,5 @@ export use commands.nu [
     push,
     pop
 ]
+
+export def main [] {ls}
