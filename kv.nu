@@ -46,7 +46,7 @@ def load-kv [] : nothing -> record {
 }
 
 # Generate a timestamped filename
-def date_now [] {
+def date-now [] {
     date now | format date "%Y%m%d_%H%M%S_%f"
 }
 
@@ -74,7 +74,7 @@ export def set [
 
     # Generate a unique filename for the value
     let $file_path = kv-path --values_folder
-        | path join $"($key)_(date_now).($file_extension)"
+        | path join $"($key)_(date-now).($file_extension)"
 
     # Save the value to the file
     $value_to_store | save $file_path
