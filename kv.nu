@@ -21,7 +21,7 @@ export def main [] {
 # Return the path to the KV store file or values folder
 def kvPath [
     --values_folder  # Return the path to the values folder instead of the KV file
-] null -> path {
+]: nothing -> path {
     $nu.home-path
     | path join '.config' 'nushell' 'kv'
     | if $values_folder {
@@ -56,7 +56,7 @@ export def set [
     value?: any                   # Provide the value to set (optional if used in a pipeline)
     -p                            # Output the input value back to the pipeline
     --extension (-e): string = '' # Specify the file extension for saving
-] any -> any {
+]: any -> any {
     let $input = $in # we store input here as it might be needed to return at the end of this command
     let $value_to_store = if $value == null { $input } else { $value }
     let $value_type = $value_to_store | describe
@@ -134,7 +134,7 @@ export def push [
     value?: any                 # Provide the value to push (optional if used in a pipeline)
     -p                          # Output the input value back to the pipeline
     -u                          # Ensure uniqueness in the list
-] any -> any {
+]: any -> any {
     let $input = $in
     let $value_to_push = if $value != null {
             $value
