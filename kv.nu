@@ -19,7 +19,7 @@ export def main [] {
 }
 
 # Return the path to the KV store file or values folder
-def kvPath [
+def kv-path [
     --values_folder  # Return the path to the values folder instead of the KV file
 ]: nothing -> path {
     $nu.home-path
@@ -35,10 +35,10 @@ def kvPath [
 
 # Load the KV store, creating it and the values folder if they don't exist
 def load-kv [] : nothing -> record {
-    let $kv_file = kvPath
+    let $kv_file = kv-path
     if not ($kv_file | path exists) {
         # Create the values folder and initialize an empty KV store
-        mkdir (kvPath --values_folder)
+        mkdir (kv-path --values_folder)
         {} | save $kv_file
     }
     # Open and return the KV store
@@ -73,7 +73,7 @@ export def set [
         }
 
     # Generate a unique filename for the value
-    let $file_path = kvPath --values_folder
+    let $file_path = kv-path --values_folder
         | path join $"($key)_(date_now).($file_extension)"
 
     # Save the value to the file
@@ -83,7 +83,7 @@ export def set [
     load-kv
     | reject $key -i # Remove existing key to sort chronologically
     | insert $key $file_path
-    | save -f (kvPath)
+    | save -f (kv-path)
 
     # Output the input value if -p is specified
     if $p { return $input }
@@ -101,10 +101,10 @@ export def get-file [
     filename: string@'nu-complete-file-names' = ''  # Specify the filename to retrieve
 ] {
     if $filename == '' {
-        ls (kvPath --values_folder)
+        ls (kv-path --values_folder)
         | sort-by modified -r
     } else {
-        kvPath --values_folder
+        kv-path --values_folder
         | path join $filename
         | open
     }
@@ -115,7 +115,7 @@ export def del [
     key: string@'nu-complete-key-names' = 'last'  # Specify the key to delete
 ] {
     # Remove the key and save the KV store
-    load-kv | reject $key | save -f (kvPath)
+    load-kv | reject $key | save -f (kv-path)
 }
 
 # Reset the KV store (leave all files in the 'values' folder)
@@ -124,7 +124,7 @@ export def reset [] {
     [false true]
     | input list 'confirm'
     | if $in {
-        {} | save -f (kvPath)
+        {} | save -f (kv-path)
     }
 }
 
@@ -150,7 +150,7 @@ export def push [
         # Key does not exist; create a new list with the value
         $kv_store
         | upsert $key [$value_to_push]
-        | save -f (kvPath)
+        | save -f (kv-path)
     } else {
         # Key exists; retrieve and update the list
         let $stored_list = $kv_store | core get $key
@@ -167,7 +167,7 @@ export def push [
             }
 
         # Update the KV store
-        $kv_store | upsert $key $updated_list | save -f (kvPath)
+        $kv_store | upsert $key $updated_list | save -f (kv-path)
     }
 
     # Output the input value if -p is specified
@@ -214,7 +214,7 @@ def nu-complete-key-names [] {
 
 # Autocompletion for file names in the values folder
 def nu-complete-file-names [] {
-    ls -s (kvPath --values_folder)
+    ls -s (kv-path --values_folder)
     | sort-by modified --reverse
     | select name modified
     | update modified { date humanize }
