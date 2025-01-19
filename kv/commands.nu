@@ -39,19 +39,16 @@ def kv-path [
 
 export def --env init [
     dir?: path
+    --reset
 ] {
-    if $dir != null {
-        $env.kv.path = $dir
-    }
+    if $dir != null { $env.kv.path = $dir }
 
     let $kv_file = kv-path
 
-    $kv_file
-    | path exists
-    | if not $in {
+    if $reset or not ($kv_file | path exists) {
         # Create the values folder and initialize an empty KV store
         mkdir (kv-path --values_folder)
-        {} | save $kv_file
+        {} | save --force $kv_file
     }
 }
 
