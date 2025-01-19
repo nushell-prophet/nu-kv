@@ -108,11 +108,12 @@ export def get [
     --ignore-errors (-i)
 ] {
     load-kv
-    | if $ignore_errors {
-        core_get -i $key
-        | if $in != null {open}
-    } else {
+    | if $key in $in {
         core_get $key | open
+    } else {
+        if $ignore_errors { return } else {
+            error make {msg: $'ther is no `($key)` key in `(kv-path)`'}
+        }
     }
 }
 
