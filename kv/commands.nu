@@ -105,8 +105,15 @@ export def set [
 # Get a value from the KV store
 export def get [
     key: string@'nu-complete-key-names' = 'last'  # Specify the key to retrieve
+    --ignore-errors (-i)
 ] {
-    load-kv | core_get $key | open
+    load-kv
+    | if $ignore_errors {
+        core_get -i $key
+        | if $in != null {open}
+    } else {
+        core_get $key | open
+    }
 }
 
 # Retrieve a file by its filename from the values folder
