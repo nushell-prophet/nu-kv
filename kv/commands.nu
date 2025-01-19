@@ -37,16 +37,28 @@ def kv-path [
     }
 }
 
-# Load the KV store, creating it and the values folder if they don't exist
-def load-kv [] : nothing -> record {
+export def --env init [
+    dir?: path
+] {
+    if $dir != null {
+        $env.kv.path = $dir
+    }
+
     let $kv_file = kv-path
-    if not ($kv_file | path exists) {
+
+    $kv_file
+    | path exists
+    | if not $in {
         # Create the values folder and initialize an empty KV store
         mkdir (kv-path --values_folder)
         {} | save $kv_file
     }
+}
+
+# Load the KV store, creating it and the values folder if they don't exist
+def load-kv []: nothing -> record {
     # Open and return the KV store
-    open $kv_file
+    kv-path | open
 }
 
 # Generate a timestamped filename
