@@ -3,7 +3,7 @@
 # https://discord.com/channels/601130461678272522/615253963645911060/1149709351821516900
 
 # Alias to avoid conflict with the custom 'get' function
-alias "core get" = get
+alias core_get = get
 alias core_ls = ls
 
 # Display the KV store as a table or list files in the values folder
@@ -12,7 +12,7 @@ export def ls [] {
     load-kv
     | items {|key, value| { name: $key, filename: $value } }
     | insert modified {|item|
-        core_ls $item.filename | core get 0.modified
+        core_ls $item.filename | core_get 0.modified
     }
     | sort-by modified --reverse
     | update modified { date humanize }
@@ -94,7 +94,7 @@ export def set [
 export def get [
     key: string@'nu-complete-key-names' = 'last'  # Specify the key to retrieve
 ] {
-    load-kv | core get $key | open
+    load-kv | core_get $key | open
 }
 
 # Retrieve a file by its filename from the values folder
@@ -154,7 +154,7 @@ export def push [
         | save -f (kv-path)
     } else {
         # Key exists; retrieve and update the list
-        let $stored_list = $kv_store | core get $key
+        let $stored_list = $kv_store | core_get $key
         if not ($stored_list | describe | str starts-with 'list') {
             error make { msg: $"Key '($key)' is not associated with a list" }
         }
