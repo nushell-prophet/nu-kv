@@ -67,7 +67,7 @@ def date-now [] {
 export def set [
     key: string = 'last'          # Specify the key to set
     value?: any                   # Provide the value to set (optional if used in a pipeline)
-    -p                            # Output the input value back to the pipeline
+    --return-to-stdout (-p)       # Output the input value back to the pipeline
     --extension (-e): string = '' # Specify the file extension for saving
 ]: any -> any {
     let $input = $in # we store input here as it might be needed to return at the end of this command
@@ -99,7 +99,7 @@ export def set [
     | save -f (kv-path)
 
     # Output the input value if -p is specified
-    if $p { return $input }
+    if $return_to_stdout { return $input }
 }
 
 # Get a value from the KV store
