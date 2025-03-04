@@ -112,7 +112,7 @@ export def get [
         core_get $key | open
     } else {
         if $ignore_errors { return } else {
-            error make {msg: $'ther is no `($key)` key in `(kv-path)`'}
+            error make --unspanned {msg: $'ther is no `($key)` key in `(kv-path)`'}
         }
     }
 }
