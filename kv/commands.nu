@@ -98,6 +98,10 @@ export def set [
     | insert $key $file_path
     | save -f (kv-path)
 
+    if $env.kv?.print-tables? == true {
+        print $'kv get ($key)' ($value_to_store | table -e)
+    }
+
     # Output the input value if -p is specified
     if $return_to_stdout { return $input }
 }
