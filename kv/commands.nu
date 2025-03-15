@@ -99,7 +99,7 @@ export def set [
     | save -f (kv-path)
 
     if $env.kv?.print-tables? == true {
-        print $'kv get ($key)' ($value_to_store | table -e)
+        print $'You can preview this variable with `kv get ($key)`' ($value_to_store | table -e)
     }
 
     # Output the input value if -p is specified
