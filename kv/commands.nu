@@ -77,12 +77,10 @@ export def set [
     # Determine the file extension based on the value type
     let file_extension = if $extension != '' {
         $extension
-    } else if $value_type =~ 'table|list|record|binary' {
-        'msgpackz'
     } else if $value_type == 'string' {
         'txt' # 'msgpackz' can't store primitives in some versions
     } else {
-        'nuon'
+        'nuon' # I use Nuon here only for storing variables in version control.
     }
 
     # Generate a unique filename for the value
