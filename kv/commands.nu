@@ -23,17 +23,20 @@ export def ls [] {
 def kv-path [
     --values_folder # Return the path to the values folder instead of the KV file
 ]: nothing -> path {
-    $env.kv?.path?
+    let main_path = $env.kv?.path?
     | if $in != null { } else {
-        $nu.home-path
-        | path join '.config' 'nushell' 'kv'
+        $nu.data-dir | path join 'kv'
     }
-    | if $values_folder {
-        # Return the path to the 'values' folder
-        path join 'values'
+
+    let values_path = $main_path | path join 'values'
+
+    $values_path | if not ($in | path exists) { mkdir $in }
+
+    if $values_folder {
+        $values_path
     } else {
         # Return the path to the 'kv.nuon' file
-        path join 'kv.nuon'
+        $main_path | path join 'kv.nuon'
     }
 }
 
