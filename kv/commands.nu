@@ -14,7 +14,7 @@ export def ls [] {
     | insert modified {|item|
         core_ls $item.filename | core_get 0.modified
     }
-    | sort-by modified --reverse
+    | reverse # files in the store are stored chronologically
     | update modified { date humanize }
     | select name modified
 }
