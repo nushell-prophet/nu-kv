@@ -75,15 +75,18 @@ export def set [
 ]: any -> any {
     let input = $in # we store input here as it might be needed to return at the end of this command
     let value_to_store = if $value == null { $input } else { $value }
-    let value_type = $value_to_store | describe
 
     # Determine the file extension based on the value type
     let file_extension = if $extension != '' {
         $extension
-    } else if $value_type == 'string' {
-        'txt' # 'msgpackz' can't store primitives in some versions
     } else {
-        'nuon' # I use Nuon here only for storing variables in version control.
+        let value_type = $value_to_store | describe
+
+        if $value_type == 'string' {
+            'txt' # 'msgpackz' can't store primitives in some versions
+        } else {
+            'nuon' # I use Nuon here only for storing variables in version control.
+        }
     }
 
     # Generate a unique filename for the value
