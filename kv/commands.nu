@@ -69,14 +69,20 @@ def date-now [] {
 }
 
 # Set a value in the KV store, optionally taking input from the pipeline
-export def set [
+export def --env set [
     key: string = 'last' # Specify the key to set
     value?: any # Provide the value to set (optional if used in a pipeline)
     --return-to-stdout (-p) # Output the input value back to the pipeline
     --extension (-e): string = '' # Specify the file extension for saving
+    --cwd # set kv dir in current folder
 ]: any -> any {
     let input = $in # we store input here as it might be needed to return at the end of this command
     let value_to_store = if $value == null { $input } else { $value }
+
+    if $cwd {
+        $env.kv.path = (pwd | path join nushell-kv)
+        if $value_to_store == null { return }
+    }
 
     # Determine the file extension based on the value type
     let file_extension = if $extension != '' {
