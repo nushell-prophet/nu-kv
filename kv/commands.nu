@@ -102,7 +102,11 @@ export def --env set [
     | path join $"($key)_(date-now).($file_extension)"
 
     # Save the value to the file
-    $value_to_store | save $file_path
+    $value_to_store
+    | if $file_extension == nuon {
+        to nuon --indent 4
+    } else { }
+    | save --raw=($file_extension == 'nuon') $file_path
 
     # Update the KV store
     load-kv
