@@ -29,14 +29,16 @@ def kv-path [
     }
 
     let values_path = $main_path | path join 'values'
+    if not ($values_path | path exists) { mkdir $values_path }
 
-    $values_path | if not ($in | path exists) { mkdir $in }
+    let dict_path = $main_path | path join 'kv.nuon'
+    if not ($dict_path | path exists) { {} | save $dict_path }
 
     if $values_folder {
         $values_path
     } else {
         # Return the path to the 'kv.nuon' file
-        $main_path | path join 'kv.nuon'
+        $dict_path
     }
 }
 
