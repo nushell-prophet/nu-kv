@@ -108,10 +108,12 @@ export def --env set [
     } else { }
     | save --raw=($file_extension == 'nuon') $file_path
 
+    let $key_mod = $'($key)($env.kv?.keys-suffix?)'
+
     # Update the KV store
     load-kv
-    | reject $key -i # Remove existing key to sort chronologically
-    | insert $key $file_path
+    | reject $key_mod -i # Remove existing key to sort chronologically
+    | insert $key_mod $file_path
     | save -f (kv-path)
 
     if $env.kv?.print-tables? == true {
