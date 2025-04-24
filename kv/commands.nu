@@ -269,3 +269,22 @@ def history-last [] {
     | query db "select * from history order by id desc limit 1"
     | get command_line.0
 }
+
+# Helper command to check if `$env.kv-catch == true` to set kv var
+export def kv-catch [
+    key
+    value?
+    -p # pass further
+] {
+    let value = if $value == null { $in } else { $value }
+
+    if $env.kv?.debug-catch? == true {
+        let modified_key = $env.kv?.debug-tag?
+        | if $in != null { $'($key)_($in)' } else { $key }
+
+        kv set $modified_key $value
+    }
+
+    if $p { $value }
+}
+
