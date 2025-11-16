@@ -10,7 +10,7 @@ alias core_ls = ls
 export def ls [] {
     # Load the KV store and display it as a table with modification dates
     load-kv
-    | items {|key, value| {name: $key filename: $value} }
+    | items {|key value| {name: $key filename: $value} }
     | insert modified {|item|
         core_ls $item.filename | core_get 0.modified
     }
@@ -287,4 +287,3 @@ export def kv-catch [
 
     if $p { $value }
 }
-
