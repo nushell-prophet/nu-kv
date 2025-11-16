@@ -12,7 +12,8 @@ export def ls [] {
     load-kv
     | items {|key value| {name: $key filename: $value} }
     | insert modified {|item|
-        core_ls $item.filename | core_get 0.modified
+        let full_path = kv-path --values_folder | path join $item.filename
+        core_ls $full_path | core_get 0.modified
     }
     | reverse # files in the store are stored chronologically
     | update modified { date humanize }
@@ -98,8 +99,8 @@ export def --env set [
     }
 
     # Generate a unique filename for the value
-    let file_path = kv-path --values_folder
-    | path join $"($key)_(date-now).($file_extension)"
+    let filename = $"($key)_(date-now).($file_extension)"
+    let file_path = kv-path --values_folder | path join $filename
 
     # Save the value to the file
     $value_to_store
@@ -110,10 +111,10 @@ export def --env set [
 
     let $key_mod = $'($key)($env.kv?.keys-suffix?)'
 
-    # Update the KV store
+    # Update the KV store (store only the relative filename)
     load-kv
     | reject $key_mod -o # Remove existing key to sort chronologically
-    | insert $key_mod $file_path
+    | insert $key_mod $filename
     | save -f (kv-path)
 
     if $env.kv?.print-tables? == true {
@@ -131,7 +132,8 @@ export def get [
 ] {
     load-kv
     | if $key in $in {
-        core_get $key | open
+        let filename = core_get $key
+        kv-path --values_folder | path join $filename | open
     } else {
         if $ignore_errors { return } else {
             error make --unspanned {msg: $'ther is no `($key)` key in `(kv-path)`'}
@@ -245,7 +247,7 @@ export def "pop" [
 
 # Autocompletion for key names
 def nu-complete-key-names [] {
-    main
+    ls
     | rename value description
     | {
         completions : $in
