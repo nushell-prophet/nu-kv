@@ -112,7 +112,7 @@ export def --env set [
 
     # Update the KV store
     load-kv
-    | reject $key_mod -i # Remove existing key to sort chronologically
+    | reject $key_mod -o # Remove existing key to sort chronologically
     | insert $key_mod $file_path
     | save -f (kv-path)
 
