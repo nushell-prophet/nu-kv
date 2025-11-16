@@ -11,3 +11,4 @@ export use commands.nu [
 ]
 
 export def main [] {ls}
+# kv module respects $env.kv.path for locating it's cache
