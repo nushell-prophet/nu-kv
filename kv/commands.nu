@@ -82,7 +82,8 @@ def resolve-value [param_value?: any]: any -> any {
 
 # Update the KV store by applying an updater closure
 def update-kv [updater: closure]: nothing -> nothing {
-    load-kv | do $updater | save -f (kv-path)
+    let kv = load-kv
+    do $updater $kv | save -f (kv-path)
 }
 
 # Set a value in the KV store, optionally taking input from the pipeline
