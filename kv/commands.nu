@@ -13,10 +13,9 @@ export def ls [] {
     | items {|key value| {name: $key filename: $value} }
     | insert modified {|item|
         let full_path = value-path $item.filename
-        core_ls $full_path | core_get 0.modified
+        core_ls $full_path | core_get 0.modified | date humanize
     }
     | reverse # files in the store are stored chronologically
-    | update modified { date humanize }
     | select name modified
 }
 
@@ -260,7 +259,7 @@ export def "pop" [
 def make-completion []: table -> record {
     {
         completions: ($in | rename value description)
-        options: { sort: false }
+        options: {sort: false}
     }
 }
 
