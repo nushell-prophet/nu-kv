@@ -124,13 +124,13 @@ export def --env set [
     } else { }
     | save --raw=$is_nuon $file_path
 
-    let $key_mod = $'($key)($env.kv?.keys-suffix?)'
+    let $key_with_suffix = $'($key)($env.kv?.keys-suffix?)'
 
     # Update the KV store (store only the relative filename)
     update-kv {|kv|
         $kv
-        | reject $key_mod -o # Remove existing key to sort chronologically
-        | insert $key_mod $filename
+        | reject $key_with_suffix -o # Remove existing key to sort chronologically
+        | insert $key_with_suffix $filename
     }
 
     if $env.kv?.print-tables? == true {
