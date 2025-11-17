@@ -256,16 +256,17 @@ export def "pop" [
     $value
 }
 
+# Helper to create completion records
+def make-completion []: table -> record {
+    {
+        completions: ($in | rename value description)
+        options: { sort: false }
+    }
+}
+
 # Autocompletion for key names
 def nu-complete-key-names [] {
-    ls
-    | rename value description
-    | {
-        completions : $in
-        options: {
-            sort: false
-        }
-    }
+    ls | make-completion
 }
 
 # Autocompletion for file names in the values folder
@@ -274,7 +275,7 @@ def nu-complete-file-names [] {
     | sort-by modified --reverse
     | select name modified
     | update modified { date humanize }
-    | rename value description
+    | make-completion
 }
 
 def history-last [] {
