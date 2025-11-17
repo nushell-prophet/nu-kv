@@ -245,10 +245,11 @@ export def "pop" [
     key # Key to get
 ] {
     let stored = get $key
-    let value = $stored
-    | if ($in | length) == 0 { return } else { last }
 
-    if ($stored | length) > 0 { set $key ($stored | drop) }
+    if ($stored | is-empty) { return }
+
+    let value = $stored | last
+    set $key ($stored | drop)
 
     $value
 }
