@@ -201,9 +201,9 @@ export def push [
 
     let kv_store = load-kv
 
-    if not ($key in $kv_store) {
+    let updated_kv = if not ($key in $kv_store) {
         # Key does not exist; create a new list with the value
-        update-kv {|kv| $kv | upsert $key [$value_to_push] }
+        $kv_store | upsert $key [$value_to_push]
     } else {
         # Key exists; retrieve and update the list
         let stored_list = $kv_store | core_get $key
@@ -219,9 +219,10 @@ export def push [
             $stored_list | append $value_to_push
         }
 
-        # Update the KV store
-        update-kv {|kv| $kv | upsert $key $updated_list }
+        $kv_store | upsert $key $updated_list
     }
+
+    $updated_kv | save -f (kv-path)
 
     # Output the input value if -p is specified
     if $p { return $value_to_push }
