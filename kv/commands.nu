@@ -15,15 +15,17 @@ export def ls [] {
 
     # Parse filenames, group by key, and show latest version with modification time (newest first)
     $files
-    | each {|file| {
-        key: (parse-filename $file.name).key
-        modified: ($file.modified | date humanize)
-        file_modified: $file.modified
-    }}
+    | each {|file|
+        {
+            key: (parse-filename $file.name).key
+            modified: ($file.modified | date humanize)
+            file_modified: $file.modified
+        }
+    }
     | group-by key
     | items {|key files|
         let latest = $files | sort-by file_modified --reverse | first
-        {name: $key, modified: $latest.modified, file_modified: $latest.file_modified}
+        {name: $key modified: $latest.modified file_modified: $latest.file_modified}
     }
     | sort-by file_modified --reverse
     | select name modified
@@ -73,14 +75,16 @@ def load-kv []: nothing -> record {
 
     # Parse filenames and group by key, keeping only the latest file for each key
     $files
-    | each {|file| {
-        key: (parse-filename $file.name).key
-        filename: $file.name
-        modified: $file.modified
-    }}
+    | each {|file|
+        {
+            key: (parse-filename $file.name).key
+            filename: $file.name
+            modified: $file.modified
+        }
+    }
     | group-by key
     | items {|key files|
-        {key: $key, filename: ($files | sort-by modified --reverse | first).filename}
+        {key: $key filename: ($files | sort-by modified --reverse | first).filename}
     }
     | transpose -r -d
 }
@@ -108,10 +112,10 @@ def parse-filename [filename: string]: nothing -> record {
 
     if ($match | is-empty) {
         # If parsing fails, treat entire stem as key
-        {key: $stem, timestamp: "", extension: $parts.extension}
+        {key: $stem timestamp: "" extension: $parts.extension}
     } else {
         let parsed = $match | first
-        {key: $parsed.key, timestamp: $parsed.timestamp, extension: $parts.extension}
+        {key: $parsed.key timestamp: $parsed.timestamp extension: $parts.extension}
     }
 }
 
