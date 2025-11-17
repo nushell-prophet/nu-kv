@@ -24,9 +24,7 @@ def kv-path [
     --values_folder # Return the path to the values folder instead of the KV file
 ]: nothing -> path {
     let main_path = $env.kv?.path?
-    | if $in != null { } else {
-        $nu.data-dir | path join 'kv'
-    }
+    | default { $nu.data-dir | path join 'kv' }
 
     let values_path = $main_path | path join 'values'
     if not ($values_path | path exists) { mkdir $values_path }
