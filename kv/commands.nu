@@ -12,7 +12,7 @@ export def ls [] {
     load-kv
     | items {|key value| {name: $key filename: $value} }
     | insert modified {|item|
-        let full_path = kv-path --values_folder | path join $item.filename
+        let full_path = value-path $item.filename
         core_ls $full_path | core_get 0.modified
     }
     | reverse # files in the store are stored chronologically
@@ -69,6 +69,11 @@ def date-now [] {
     date now | format date "%Y%m%d_%H%M%S_%f"
 }
 
+# Get the full path to a value file in the values folder
+def value-path [filename: string]: nothing -> path {
+    kv-path --values_folder | path join $filename
+}
+
 # Set a value in the KV store, optionally taking input from the pipeline
 export def --env set [
     key: string = 'last' # Specify the key to set
@@ -100,7 +105,7 @@ export def --env set [
 
     # Generate a unique filename for the value
     let filename = $"($key)_(date-now).($file_extension)"
-    let file_path = kv-path --values_folder | path join $filename
+    let file_path = value-path $filename
 
     # Save the value to the file
     $value_to_store
@@ -133,7 +138,7 @@ export def get [
     load-kv
     | if $key in $in {
         let filename = core_get $key
-        kv-path --values_folder | path join $filename | open
+        value-path $filename | open
     } else {
         if $ignore_errors { return } else {
             error make --unspanned {msg: $'ther is no `($key)` key in `(kv-path)`'}
@@ -149,9 +154,7 @@ export def get-file [
         core_ls (kv-path --values_folder)
         | sort-by modified -r
     } else {
-        kv-path --values_folder
-        | path join $filename
-        | open
+        value-path $filename | open
     }
 }
 
