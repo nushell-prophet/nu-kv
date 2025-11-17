@@ -74,6 +74,12 @@ def value-path [filename: string]: nothing -> path {
     kv-path --values_folder | path join $filename
 }
 
+# Resolve value from either parameter or pipeline input
+def resolve-value [param_value?: any]: any -> any {
+    let input = $in
+    if $param_value != null { $param_value } else { $input }
+}
+
 # Set a value in the KV store, optionally taking input from the pipeline
 export def --env set [
     key: string = 'last' # Specify the key to set
@@ -83,7 +89,7 @@ export def --env set [
     --cwd # set kv dir in current folder
 ]: any -> any {
     let input = $in # we store input here as it might be needed to return at the end of this command
-    let value_to_store = if $value == null { $input } else { $value }
+    let value_to_store = $in | resolve-value $value
 
     if $cwd {
         $env.kv.path = (pwd | path join nushell-kv)
@@ -183,12 +189,9 @@ export def push [
     -p # Output the input value back to the pipeline
     -u # Ensure uniqueness in the list
 ]: any -> any {
-    let input = $in
-    let value_to_push = if $value != null {
-        $value
-    } else if $input != null {
-        $input
-    } else {
+    let value_to_push = $in | resolve-value $value
+
+    if $value_to_push == null {
         error make {msg: "No value provided to push"}
     }
 
@@ -281,7 +284,7 @@ export def kv-catch [
     value?
     -p # pass further
 ] {
-    let value = if $value == null { $in } else { $value }
+    let value = $in | resolve-value $value
 
     if $env.kv?.debug-catch? == true {
         let modified_key = $env.kv?.debug-tag?
