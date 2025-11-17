@@ -33,13 +33,12 @@ export def ls [] {
 
 # Return the path to the KV store values folder
 def kv-path []: nothing -> path {
-    let main_path = $env.kv?.path?
+    $env.kv?.path?
     | default { $nu.data-dir | path join 'kv' }
-
-    let values_path = $main_path | path join 'values'
-    if not ($values_path | path exists) { mkdir $values_path }
-
-    $values_path
+    | path join 'values'
+    | if ($in | path exists) { } else {
+        mkdir $in; $in
+    }
 }
 
 export def --env init [
