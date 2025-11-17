@@ -8,7 +8,7 @@ alias core_ls = ls
 
 # Display the KV store as a table or list files in the values folder
 export def ls [] {
-    let values_path = kv-path --values_folder
+    let values_path = kv-path
     let files = core_ls -s $values_path
 
     if ($files | is-empty) { return [] }
@@ -31,22 +31,15 @@ export def ls [] {
     | select name modified
 }
 
-# Return the path to the KV store values folder or main path
-def kv-path [
-    --values_folder # Return the path to the values folder instead of the main path
-]: nothing -> path {
+# Return the path to the KV store values folder
+def kv-path []: nothing -> path {
     let main_path = $env.kv?.path?
     | default { $nu.data-dir | path join 'kv' }
 
     let values_path = $main_path | path join 'values'
     if not ($values_path | path exists) { mkdir $values_path }
 
-    if $values_folder {
-        $values_path
-    } else {
-        # Return the main KV path
-        $main_path
-    }
+    $values_path
 }
 
 export def --env init [
@@ -55,7 +48,7 @@ export def --env init [
 ] {
     if $dir != null { $env.kv.path = $dir }
 
-    let values_folder = kv-path --values_folder
+    let values_folder = kv-path
 
     if $reset and ($values_folder | path exists) {
         rm -rf $values_folder
@@ -66,7 +59,7 @@ export def --env init [
 
 # Load the KV store by scanning the filesystem and building a record of latest files per key
 def load-kv []: nothing -> record {
-    let values_path = kv-path --values_folder
+    let values_path = kv-path
     let files = core_ls -s $values_path
 
     if ($files | is-empty) {
@@ -96,7 +89,7 @@ def date-now [] {
 
 # Get the full path to a value file in the values folder
 def value-path [filename: string]: nothing -> path {
-    kv-path --values_folder | path join $filename
+    kv-path | path join $filename
 }
 
 # Parse a filename to extract the key name and timestamp
@@ -121,7 +114,7 @@ def parse-filename [filename: string]: nothing -> record {
 
 # Get all files for a specific key, sorted by timestamp (newest first)
 def files-for-key [key: string]: nothing -> table {
-    core_ls -s (kv-path --values_folder)
+    core_ls -s (kv-path)
     | where {|file|
         let parsed = parse-filename $file.name
         $parsed.key == $key
@@ -204,7 +197,7 @@ export def get-file [
     filename: string@'nu-complete-file-names' = '' # Specify the filename to retrieve
 ] {
     if $filename == '' {
-        core_ls (kv-path --values_folder)
+        core_ls (kv-path)
         | sort-by modified -r
     } else {
         value-path $filename | open
@@ -231,7 +224,7 @@ export def reset [] {
     [false true]
     | input list 'confirm'
     | if $in {
-        let values_folder = kv-path --values_folder
+        let values_folder = kv-path
         rm -rf $values_folder
         mkdir $values_folder
     }
@@ -314,7 +307,7 @@ def nu-complete-key-names [] {
 
 # Autocompletion for file names in the values folder
 def nu-complete-file-names [] {
-    core_ls -s (kv-path --values_folder)
+    core_ls -s (kv-path)
     | sort-by modified --reverse
     | select name modified
     | update modified { date humanize }
