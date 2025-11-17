@@ -80,6 +80,11 @@ def resolve-value [param_value?: any]: any -> any {
     if $param_value != null { $param_value } else { $input }
 }
 
+# Update the KV store by applying an updater closure
+def update-kv [updater: closure]: nothing -> nothing {
+    load-kv | do $updater | save -f (kv-path)
+}
+
 # Set a value in the KV store, optionally taking input from the pipeline
 export def --env set [
     key: string = 'last' # Specify the key to set
@@ -123,10 +128,11 @@ export def --env set [
     let $key_mod = $'($key)($env.kv?.keys-suffix?)'
 
     # Update the KV store (store only the relative filename)
-    load-kv
-    | reject $key_mod -o # Remove existing key to sort chronologically
-    | insert $key_mod $filename
-    | save -f (kv-path)
+    update-kv {|kv|
+        $kv
+        | reject $key_mod -o # Remove existing key to sort chronologically
+        | insert $key_mod $filename
+    }
 
     if $env.kv?.print-tables? == true {
         print $'You can preview this variable with `kv get ($key)`' ($value_to_store | table -e)
@@ -169,7 +175,7 @@ export def del [
     key: string@'nu-complete-key-names' = 'last' # Specify the key to delete
 ] {
     # Remove the key and save the KV store
-    load-kv | reject $key | save -f (kv-path)
+    update-kv {|kv| $kv | reject $key }
 }
 
 # Reset the KV store (leave all files in the 'values' folder)
@@ -178,7 +184,7 @@ export def reset [] {
     [false true]
     | input list 'confirm'
     | if $in {
-        {} | save -f (kv-path)
+        update-kv {|kv| {} }
     }
 }
 
@@ -199,9 +205,7 @@ export def push [
 
     if not ($key in $kv_store) {
         # Key does not exist; create a new list with the value
-        $kv_store
-        | upsert $key [$value_to_push]
-        | save -f (kv-path)
+        update-kv {|kv| $kv | upsert $key [$value_to_push] }
     } else {
         # Key exists; retrieve and update the list
         let stored_list = $kv_store | core_get $key
@@ -218,7 +222,7 @@ export def push [
         }
 
         # Update the KV store
-        $kv_store | upsert $key $updated_list | save -f (kv-path)
+        update-kv {|kv| $kv | upsert $key $updated_list }
     }
 
     # Output the input value if -p is specified
