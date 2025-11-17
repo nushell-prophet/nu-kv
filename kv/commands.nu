@@ -8,15 +8,24 @@ alias core_ls = ls
 
 # Display the KV store as a table or list files in the values folder
 export def ls [] {
-    # Load the KV store and display it as a table with modification dates
-    load-kv
-    | items {|key value| {name: $key filename: $value} }
-    | insert modified {|item|
-        let full_path = value-path $item.filename
-        core_ls $full_path | core_get 0.modified | date humanize
+    let values_path = kv-path --values_folder
+    let files = core_ls -s $values_path
+
+    if ($files | is-empty) { return [] }
+
+    # Parse filenames, group by key, and show latest version with modification time
+    $files
+    | each {|file| {
+        key: (parse-filename $file.name).key
+        modified: ($file.modified | date humanize)
+        file_modified: $file.modified
+    }}
+    | group-by key
+    | items {|key files|
+        let latest = $files | sort-by file_modified --reverse | first
+        {name: $key, modified: $latest.modified}
     }
-    | reverse # files in the store are stored chronologically
-    | select name modified
+    | reverse
 }
 
 # Return the path to the KV store values folder or main path
@@ -43,26 +52,18 @@ export def --env init [
 ] {
     if $dir != null { $env.kv.path = $dir }
 
-    let kv_main_path = kv-path
     let values_folder = kv-path --values_folder
 
-    if $reset {
-        # Delete all files in the values folder
-        if ($values_folder | path exists) {
-            rm -rf $values_folder
-        }
-        mkdir $values_folder
-    } else if not ($kv_main_path | path exists) {
-        # Create the values folder if it doesn't exist
-        mkdir $values_folder
+    if $reset and ($values_folder | path exists) {
+        rm -rf $values_folder
     }
+
+    mkdir $values_folder
 }
 
 # Load the KV store by scanning the filesystem and building a record of latest files per key
 def load-kv []: nothing -> record {
     let values_path = kv-path --values_folder
-
-    # List all files in the values folder
     let files = core_ls -s $values_path
 
     if ($files | is-empty) {
@@ -71,19 +72,16 @@ def load-kv []: nothing -> record {
 
     # Parse filenames and group by key, keeping only the latest file for each key
     $files
-    | each {|file|
-        let parsed = parse-filename $file.name
-        {key: $parsed.key, filename: $file.name, modified: $file.modified}
-    }
+    | each {|file| {
+        key: (parse-filename $file.name).key
+        filename: $file.name
+        modified: $file.modified
+    }}
     | group-by key
     | items {|key files|
-        # Sort by modified time and get the latest filename
-        let latest = $files | sort-by modified --reverse | first
-        {key: $key, filename: $latest.filename}
+        {key: $key, filename: ($files | sort-by modified --reverse | first).filename}
     }
-    | reduce -f {} {|item acc|
-        $acc | insert $item.key $item.filename
-    }
+    | transpose -r -d
 }
 
 # Generate a timestamped filename
@@ -126,11 +124,6 @@ def files-for-key [key: string]: nothing -> table {
     | sort-by modified --reverse
 }
 
-# Get the most recent file for a specific key
-def latest-file-for-key [key: string]: nothing -> record {
-    files-for-key $key | first
-}
-
 # Resolve value from either parameter or pipeline input
 def resolve-value [param_value?: any]: any -> any {
     let input = $in
@@ -171,12 +164,9 @@ export def --env set [
     let file_path = value-path $filename
 
     # Save the value to the file
-    let is_nuon = $file_extension == 'nuon'
     $value_to_store
-    | if $is_nuon {
-        to nuon --indent 4
-    } else { }
-    | save --raw=$is_nuon $file_path
+    | if $file_extension == 'nuon' { to nuon --indent 4 } else { $in }
+    | save --raw=($file_extension == 'nuon') $file_path
 
     # No need to update kv.nuon - filesystem ls will discover this file automatically
 
@@ -191,14 +181,14 @@ export def --env set [
 # Get a value from the KV store
 export def get [
     key: string@'nu-complete-key-names' = 'last' # Specify the key to retrieve
-    --ignore-errors (-i)
+    --optional (-o) # Return null instead of error if key doesn't exist
 ] {
     load-kv
     | if $key in $in {
         let filename = core_get $key
         value-path $filename | open
     } else {
-        if $ignore_errors { return } else {
+        if $optional { return } else {
             error make --unspanned {msg: $'there is no `($key)` key in the KV store'}
         }
     }
@@ -227,10 +217,7 @@ export def del [
         error make --unspanned {msg: $'there is no `($key)` key in the KV store'}
     }
 
-    $files | each {|file|
-        let file_path = value-path $file.name
-        rm $file_path
-    }
+    $files.name | each {|name| rm (value-path $name) }
 }
 
 # Reset the KV store (delete all files in the 'values' folder)
@@ -258,26 +245,19 @@ export def push [
         error make {msg: "No value provided to push"}
     }
 
-    # Try to get the existing value for this key
-    let kv_store = load-kv
+    # Get existing value or start with empty list
+    let stored_list = get $key --optional | default []
 
-    let updated_list = if not ($key in $kv_store) {
-        # Key does not exist; create a new list with the value
-        [$value_to_push]
+    if not ($stored_list | is-empty) and not ($stored_list | describe | str starts-with 'list') {
+        error make {msg: $"Key '($key)' is not associated with a list"}
+    }
+
+    let updated_list = if $u {
+        # Ensure uniqueness
+        $stored_list | where {|x| $x != $value_to_push } | append $value_to_push
     } else {
-        # Key exists; retrieve and update the list
-        let stored_list = get $key
-        if not ($stored_list | describe | str starts-with 'list') {
-            error make {msg: $"Key '($key)' is not associated with a list"}
-        }
-
-        if $u {
-            # Ensure uniqueness
-            $stored_list | where {|x| $x != $value_to_push } | append $value_to_push
-        } else {
-            # Simply append the new value
-            $stored_list | append $value_to_push
-        }
+        # Simply append the new value
+        $stored_list | append $value_to_push
     }
 
     # Save the updated list using the set command
@@ -334,12 +314,6 @@ def nu-complete-file-names [] {
     | select name modified
     | update modified { date humanize }
     | make-completion
-}
-
-def history-last [] {
-    open $nu.history-path
-    | query db "select * from history order by id desc limit 1"
-    | get command_line.0
 }
 
 # Helper command to check if `$env.kv-catch == true` to set kv var
