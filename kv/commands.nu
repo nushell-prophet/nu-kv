@@ -37,13 +37,14 @@ def kv-path []: nothing -> path {
     | default { $nu.data-dir | path join 'kv' }
     | path join 'values'
     | if ($in | path exists) { } else {
-        mkdir $in; $in
+        tee { mkdir $in }
     }
 }
 
+# Initialize the KV store with optional custom directory
 export def --env init [
-    dir?: path
-    --reset
+    dir?: path # Custom directory path for KV store
+    --reset # Delete existing values folder before initialization
 ] {
     if $dir != null { $env.kv.path = $dir }
 
@@ -234,7 +235,7 @@ export def push [
     key: string # Specify the key to push to
     value?: any # Provide the value to push (optional if used in a pipeline)
     -p # Output the input value back to the pipeline
-    -u # Ensure uniqueness in the list
+    -u # Ensure uniqueness by removing duplicates before appending
 ]: any -> any {
     let value_to_push = $in | resolve-value $value
 
@@ -278,7 +279,7 @@ export def push [
 # │ empty list │
 # ╰────────────╯
 export def "pop" [
-    key # Key to get
+    key: string@'nu-complete-key-names' = 'last' # Specify the key to pop from
 ] {
     let stored = get $key
 
@@ -314,8 +315,8 @@ def nu-complete-file-names [] {
 
 # Conditionally store a value if debug-catch mode is enabled
 export def kv-catch [
-    key
-    value?
+    key: string # Specify the key to store the value under
+    value?: any # Provide the value to store (optional if used in a pipeline)
     -p # Pass value to output
 ] {
     let value = $in | resolve-value $value
