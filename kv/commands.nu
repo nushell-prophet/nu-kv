@@ -2,11 +2,11 @@
 # Original version by @clipplerblood
 # https://discord.com/channels/601130461678272522/615253963645911060/1149709351821516900
 
-# Alias to avoid conflict with the custom 'get' function
+# Aliases to avoid conflicts with custom 'get' and 'ls' functions
 alias core_get = get
 alias core_ls = ls
 
-# Display the KV store as a table or list files in the values folder
+# Display the KV store as a table with latest version of each key
 export def ls [] {
     let values_path = kv-path
     let files = core_ls -s $values_path
@@ -133,9 +133,9 @@ export def --env set [
     value?: any # Provide the value to set (optional if used in a pipeline)
     --return-to-stdout (-p) # Output the input value back to the pipeline
     --extension (-e): string = '' # Specify the file extension for saving
-    --cwd # set kv dir in current folder
+    --cwd # Set KV directory in current folder
 ]: any -> any {
-    let input = $in # we store input here as it might be needed to return at the end of this command
+    let input = $in # Store input for potential return at end of command
     let value_to_store = $in | resolve-value $value
 
     if $cwd {
@@ -150,9 +150,9 @@ export def --env set [
         let value_type = $value_to_store | describe
 
         if $value_type == 'string' {
-            'txt' # 'msgpackz' can't store primitives in some versions
+            'txt' # 'msgpackz' cannot reliably store primitives
         } else {
-            'nuon' # I use Nuon here only for storing variables in version control.
+            'nuon' # Use Nuon for non-string values (supports version control)
         }
     }
 
@@ -165,7 +165,7 @@ export def --env set [
     | if $file_extension == 'nuon' { to nuon --indent 4 } else { $in }
     | save --raw=($file_extension == 'nuon') $file_path
 
-    # No need to update kv.nuon - filesystem ls will discover this file automatically
+    # Filesystem scanning will discover this file automatically
 
     if $env.kv?.print-tables? == true {
         print $'You can preview this variable with `kv get ($key)`' ($value_to_store | table -e)
@@ -264,8 +264,7 @@ export def push [
     if $p { return $value_to_push }
 }
 
-# Get the last value of a list in the KV store.
-# Not an actual "pop". To remove the element, use the flag -r.
+# Get and remove the last value from a list in the KV store
 # Example:
 # > kv set my-stack ["hello", "world"]
 # > kv pop my-stack
@@ -313,11 +312,11 @@ def nu-complete-file-names [] {
     | make-completion
 }
 
-# Helper command to check if `$env.kv-catch == true` to set kv var
+# Conditionally store a value if debug-catch mode is enabled
 export def kv-catch [
     key
     value?
-    -p # pass further
+    -p # Pass value to output
 ] {
     let value = $in | resolve-value $value
 
