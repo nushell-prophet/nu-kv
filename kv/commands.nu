@@ -117,11 +117,12 @@ export def --env set [
     let file_path = value-path $filename
 
     # Save the value to the file
+    let is_nuon = $file_extension == 'nuon'
     $value_to_store
-    | if $file_extension == nuon {
+    | if $is_nuon {
         to nuon --indent 4
     } else { }
-    | save --raw=($file_extension == 'nuon') $file_path
+    | save --raw=$is_nuon $file_path
 
     let $key_mod = $'($key)($env.kv?.keys-suffix?)'
 
