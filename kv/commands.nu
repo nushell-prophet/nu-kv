@@ -13,7 +13,7 @@ export def ls [] {
 
     if ($files | is-empty) { return [] }
 
-    # Parse filenames, group by key, and show latest version with modification time
+    # Parse filenames, group by key, and show latest version with modification time (newest first)
     $files
     | each {|file| {
         key: (parse-filename $file.name).key
@@ -23,9 +23,10 @@ export def ls [] {
     | group-by key
     | items {|key files|
         let latest = $files | sort-by file_modified --reverse | first
-        {name: $key, modified: $latest.modified}
+        {name: $key, modified: $latest.modified, file_modified: $latest.file_modified}
     }
-    | reverse
+    | sort-by file_modified --reverse
+    | select name modified
 }
 
 # Return the path to the KV store values folder or main path
