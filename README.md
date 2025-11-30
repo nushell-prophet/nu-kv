@@ -1,7 +1,7 @@
 # File based nushell kv-module
 
-- Why does this module exist, as we already have the fine `std-rfc/kv` module?
-- I started developing and using this module a long time ago, and my scripts already use it. Additionally, this module relies on version-control friendly local files, rather than on an SQLite database, which also provides some advantages for me. So I continue its development.
+Q: Why does this module exist, as we already have the fine `std-rfc/kv` module?
+A: I started developing and using this module a long time ago, and my scripts already use it. Additionally, this module relies on version-control friendly local files, rather than on an SQLite database, which also provides some advantages for me. So I continue its development.
 
 ## Features
 
