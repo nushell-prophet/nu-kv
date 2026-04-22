@@ -128,6 +128,8 @@ def resolve-value [param_value?: any]: any -> any {
     if $param_value != null { $param_value } else { $input }
 }
 
+export def setp [] {pbpaste | set pbpaste}
+
 # Set a value in the KV store, optionally taking input from the pipeline
 export def --env set [
     key: string = 'last' # Specify the key to set
@@ -180,6 +182,7 @@ export def --env set [
 export def get [
     key: string@'nu-complete-key-names' = 'last' # Specify the key to retrieve
     --optional (-o) # Return null instead of error if key doesn't exist
+    --pbcopy (-p) # copy value to pbcopy
 ] {
     load-kv
     | if $key in $in {
@@ -190,6 +193,7 @@ export def get [
             error make --unspanned {msg: $'there is no `($key)` key in the KV store'}
         }
     }
+    | if $pbcopy {pbcopy} else {}
 }
 
 # Retrieve a file by its filename from the values folder

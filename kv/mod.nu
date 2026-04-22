@@ -1,6 +1,7 @@
 export use commands.nu [
     ls
     set
+    setp
     get
     get-file
     del
