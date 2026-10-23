@@ -2,14 +2,12 @@
 # Original version by @clipplerblood
 # https://discord.com/channels/601130461678272522/615253963645911060/1149709351821516900
 
-# Aliases to avoid conflicts with custom 'get' and 'ls' functions
-alias core_get = get
-alias core_ls = ls
+# The custom 'get' and 'ls' below shadow the builtins; `%get` and `%ls` reach the real ones
 
 # Display the KV store as a table with latest version of each key
-export def ls [] {
+export def ls []: any -> any {
     let values_path = kv-path
-    let files = core_ls -s $values_path
+    let files = %ls --short-names $values_path
 
     if ($files | is-empty) { return [] }
 
@@ -25,6 +23,7 @@ export def ls [] {
     | group-by key
     | items {|key files|
         let latest = $files | sort-by file_modified --reverse | first
+
         {name: $key modified: $latest.modified file_modified: $latest.file_modified}
     }
     | sort-by file_modified --reverse
@@ -32,7 +31,7 @@ export def ls [] {
 }
 
 # Return the path to the KV store values folder
-def kv-path []: nothing -> path {
+export def kv-path []: nothing -> path {
     $env.kv?.path?
     | default { $nu.data-dir | path join 'kv' }
     | path join 'values'
@@ -51,16 +50,16 @@ export def --env init [
     let values_folder = kv-path
 
     if $reset and ($values_folder | path exists) {
-        rm -rf $values_folder
+        rm --recursive --force $values_folder
     }
 
     mkdir $values_folder
 }
 
 # Load the KV store by scanning the filesystem and building a record of latest files per key
-def load-kv []: nothing -> record {
+export def load-kv []: nothing -> record {
     let values_path = kv-path
-    let files = core_ls -s $values_path
+    let files = %ls --short-names $values_path
 
     if ($files | is-empty) {
         return {}
@@ -79,52 +78,55 @@ def load-kv []: nothing -> record {
     | items {|key files|
         {key: $key filename: ($files | sort-by modified --reverse | first).filename}
     }
-    | transpose -r -d
+    | transpose --header-row --as-record
 }
 
 # Generate a timestamped filename
-def date-now [] {
+export def date-now [] {
     date now | format date "%Y%m%d_%H%M%S_%f"
 }
 
 # Get the full path to a value file in the values folder
-def value-path [filename: string]: nothing -> path {
+export def value-path [filename: string]: nothing -> path {
     kv-path | path join $filename
 }
 
 # Parse a filename to extract the key name and timestamp
 # Filename format: {key}_{timestamp}.{extension}
 # Example: mykey_20231116_215130_123456.txt -> {key: "mykey", timestamp: "20231116_215130_123456", extension: "txt"}
-def parse-filename [filename: string]: nothing -> record {
+export def parse-filename [filename: string]: nothing -> record {
     let parts = $filename | path parse
     let stem = $parts.stem
 
     # Find the last occurrence of underscore followed by a timestamp pattern
     # Timestamp format: YYYYMMDD_HHMMSS_ffffff
-    let match = $stem | parse -r '(?P<key>.+?)_(?P<timestamp>\d{8}_\d{6}_\d+)$'
+    let match = $stem | parse --regex '(?P<key>.+?)_(?P<timestamp>\d{8}_\d{6}_\d+)$'
 
     if ($match | is-empty) {
         # If parsing fails, treat entire stem as key
         {key: $stem timestamp: "" extension: $parts.extension}
     } else {
         let parsed = $match | first
+
         {key: $parsed.key timestamp: $parsed.timestamp extension: $parts.extension}
     }
 }
 
 # Get all files for a specific key, sorted by timestamp (newest first)
-def files-for-key [key: string]: nothing -> table {
-    core_ls -s (kv-path)
+export def files-for-key [key: string]: nothing -> table {
+    %ls --short-names (kv-path)
     | where {|file|
         let parsed = parse-filename $file.name
+
         $parsed.key == $key
     }
     | sort-by modified --reverse
 }
 
 # Resolve value from either parameter or pipeline input
-def resolve-value [param_value?: any]: any -> any {
+export def resolve-value [param_value?: any]: any -> any {
     let input = $in
+
     if $param_value != null { $param_value } else { $input }
 }
 
@@ -171,7 +173,7 @@ export def --env set [
     # Filesystem scanning will discover this file automatically
 
     if $env.kv?.print-tables? == true {
-        print $'You can preview this variable with `kv get ($key)`' ($value_to_store | table -e)
+        print $'You can preview this variable with `kv get ($key)`' ($value_to_store | table --expand)
     }
 
     # Output the input value if -p is specified
@@ -183,10 +185,11 @@ export def get [
     key: string@'nu-complete-key-names' = 'last' # Specify the key to retrieve
     --optional (-o) # Return null instead of error if key doesn't exist
     --pbcopy (-p) # copy value to pbcopy
-] {
+]: any -> any {
     load-kv
     | if $key in $in {
-        let filename = core_get $key
+        let filename = %get $key
+
         value-path $filename | open
     } else {
         if $optional { return } else {
@@ -201,8 +204,8 @@ export def get-file [
     filename: string@'nu-complete-file-names' = '' # Specify the filename to retrieve
 ] {
     if $filename == '' {
-        core_ls (kv-path)
-        | sort-by modified -r
+        %ls (kv-path)
+        | sort-by modified --reverse
     } else {
         value-path $filename | open
     }
@@ -211,7 +214,7 @@ export def get-file [
 # Delete a key from the KV store (removes all versions)
 export def del [
     key: string@'nu-complete-key-names' = 'last' # Specify the key to delete
-] {
+]: any -> any {
     # Find and delete all files matching this key
     let files = files-for-key $key
 
@@ -223,12 +226,13 @@ export def del [
 }
 
 # Reset the KV store (delete all files in the 'values' folder)
-export def reset [] {
+export def reset []: any -> any {
     # Confirm before resetting
     [false true]
     | input list 'confirm'
     | if $in {
         let values_folder = kv-path
+
         rm -rf $values_folder
         mkdir $values_folder
     }
@@ -238,8 +242,8 @@ export def reset [] {
 export def push [
     key: string # Specify the key to push to
     value?: any # Provide the value to push (optional if used in a pipeline)
-    -p # Output the input value back to the pipeline
-    -u # Ensure uniqueness by removing duplicates before appending
+    --return-to-stdout (-p) # Output the input value back to the pipeline
+    --unique (-u) # Ensure uniqueness by removing duplicates before appending
 ]: any -> any {
     let value_to_push = $in | resolve-value $value
 
@@ -254,7 +258,7 @@ export def push [
         error make {msg: $"Key '($key)' is not associated with a list"}
     }
 
-    let updated_list = if $u {
+    let updated_list = if $unique {
         # Ensure uniqueness
         $stored_list | where {|x| $x != $value_to_push } | append $value_to_push
     } else {
@@ -266,7 +270,7 @@ export def push [
     set $key $updated_list
 
     # Output the input value if -p is specified
-    if $p { return $value_to_push }
+    if $return_to_stdout { return $value_to_push }
 }
 
 # Get and remove the last value from a list in the KV store
@@ -284,19 +288,20 @@ export def push [
 # ╰────────────╯
 export def "pop" [
     key: string@'nu-complete-key-names' = 'last' # Specify the key to pop from
-] {
+]: any -> any {
     let stored = get $key
 
     if ($stored | is-empty) { return }
 
     let value = $stored | last
+
     set $key ($stored | drop)
 
     $value
 }
 
 # Helper to create completion records
-def make-completion []: table -> record {
+export def make-completion []: table -> record {
     {
         completions: ($in | rename value description)
         options: {sort: false}
@@ -304,13 +309,13 @@ def make-completion []: table -> record {
 }
 
 # Autocompletion for key names
-def nu-complete-key-names [] {
+export def nu-complete-key-names [] {
     ls | make-completion
 }
 
 # Autocompletion for file names in the values folder
-def nu-complete-file-names [] {
-    core_ls -s (kv-path)
+export def nu-complete-file-names [] {
+    %ls --short-names (kv-path)
     | sort-by modified --reverse
     | select name modified
     | update modified { date humanize }
@@ -321,7 +326,7 @@ def nu-complete-file-names [] {
 export def kv-catch [
     key: string # Specify the key to store the value under
     value?: any # Provide the value to store (optional if used in a pipeline)
-    -p # Pass value to output
+    --return-to-stdout (-p) # Pass value to output
 ] {
     let value = $in | resolve-value $value
 
@@ -332,5 +337,5 @@ export def kv-catch [
         kv set $modified_key $value
     }
 
-    if $p { $value }
+    if $return_to_stdout { $value }
 }
